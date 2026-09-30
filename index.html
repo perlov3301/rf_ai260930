@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junction VSWR Calculator: Two Cascaded Shorted Stubs, 3 Frequencies</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1c2330;--muted:#5d6878;--border:#d6dbe3;--accent:#1f6feb;--bad:#c62828;--ok:#1b7f3b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--card:#1b212b;--fg:#e6e9ee;--muted:#9aa5b5;--border:#323b49;--accent:#5b9dff;--bad:#ff6b6b;--ok:#4cc26f}}
+:root[data-theme="dark"]{--bg:#12161d;--card:#1b212b;--fg:#e6e9ee;--muted:#9aa5b5;--border:#323b49;--accent:#5b9dff;--bad:#ff6b6b;--ok:#4cc26f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.25rem;margin:0 0 4px}
+h2{font-size:1rem;margin:22px 0 8px;color:var(--fg)}
+p.sub{margin:0 0 18px;color:var(--muted)}
+.diagram{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;overflow-x:auto;white-space:pre}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:14px}
+fieldset{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:0;padding:12px 14px 14px}
+legend{font-weight:600;padding:0 6px}
+label{display:block;font-size:.82rem;color:var(--muted);margin-top:8px}
+input{width:100%;padding:7px 9px;margin-top:3px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:0}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.freqs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:18px}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.86rem}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:none}
+td.hl{font-weight:700}
+.msg{color:var(--bad);margin:10px 0;min-height:1.2em}
+.note{color:var(--muted);font-size:.82rem;margin-top:12px}
+.ranges{margin-bottom:18px}
+.ranges table{min-width:640px}
+.ranges td:first-child,.ranges th:first-child{text-align:left}
+.ranges input{width:90px;text-align:right;margin:0}
+.ranges .na{color:var(--muted)}
+button{margin-top:12px;padding:8px 16px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button:active{opacity:.85}
+.hint{color:var(--muted);font-size:.82rem;margin:8px 0 0}
+.worst{margin-top:12px;font-size:.9rem}
+.worst b{color:var(--bad)}
+.results table{min-width:1150px}
+</style>
+</head>
+<body>
+<main>
+<h1>Junction VSWR: two cascaded shorted stubs across a line ending in a complex load</h1>
+<p class="sub">Three frequencies, each with its own complex load. Every line segment has its own Z0, length and velocity factor. Lossless lines.</p>
+ 
+<div class="diagram">ZL ---[Line 1, Z01,len1]--- Junction 1 ---[Line 2, Z03,len3]--- Junction 2 ---[Feed line Z0f]--- source
+                              |                                |
+                       [Stub 1, Z02,len2]               [Stub 2, Z04,len4]
+                       (shorted)                          (shorted)
+ 
+VSWR is reported at Junction 2 (feed side). Zin1 = impedance looking into Junction 1
+(load line 1 + stub 1) becomes the load that Line 2 transforms up to Junction 2.</div>
+ 
+<h2>Section 1 — load line and first stub (junction 1)</h2>
+<div class="grid">
+  <fieldset><legend>Line 1 (load → junction 1)</legend>
+    <label>Z0 (Ω)<input id="z1" type="number" step="any" value="50"></label>
+    <label>Length (mm)<input id="l1" type="number" step="any" value="0"></label>
+    <label>Velocity factor<input id="v1" type="number" step="any" value="1"></label>
+  </fieldset>
+  <fieldset><legend>Stub 1 (shorted, at junction 1)</legend>
+    <label>Z0 (Ω)<input id="z2" type="number" step="any" value="50"></label>
+    <label>Length (mm)<input id="l2" type="number" step="any" value="84.36"></label>
+    <label>Velocity factor<input id="v2" type="number" step="any" value="1"></label>
+  </fieldset>
+</div>
+ 
+<h2>Section 2 — second line and second stub (junction 2)</h2>
+<div class="grid">
+  <fieldset><legend>Line 2 (junction 1 → junction 2)</legend>
+    <label>Z0 (Ω)<input id="z3" type="number" step="any" value="75"></label>
+    <label>Length (mm)<input id="l3" type="number" step="any" value="50"></label>
+    <label>Velocity factor<input id="v3" type="number" step="any" value="1"></label>
+  </fieldset>
+  <fieldset><legend>Stub 2 (shorted, at junction 2)</legend>
+    <label>Z0 (Ω)<input id="z4" type="number" step="any" value="35"></label>
+    <label>Length (mm)<input id="l4" type="number" step="any" value="60.87"></label>
+    <label>Velocity factor<input id="v4" type="number" step="any" value="1"></label>
+  </fieldset>
+  <fieldset><legend>Feed line (source side of junction 2)</legend>
+    <label>Z0 (Ω)<input id="zf" type="number" step="any" value="50"></label>
+  </fieldset>
+</div>
+ 
+<fieldset class="ranges"><legend>Random ranges per line</legend>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Line</th><th>Z0 min (Ω)</th><th>Z0 max (Ω)</th><th>Length min (mm)</th><th>Length max (mm)</th></tr></thead>
+    <tbody>
+      <tr><td>Line 1</td>
+        <td><input id="z1min" type="number" step="any" value="30"></td><td><input id="z1max" type="number" step="any" value="100"></td>
+        <td><input id="l1min" type="number" step="any" value="0"></td><td><input id="l1max" type="number" step="any" value="1000"></td></tr>
+      <tr><td>Stub 1</td>
+        <td><input id="z2min" type="number" step="any" value="30"></td><td><input id="z2max" type="number" step="any" value="100"></td>
+        <td><input id="l2min" type="number" step="any" value="100"></td><td><input id="l2max" type="number" step="any" value="1500"></td></tr>
+      <tr><td>Line 2</td>
+        <td><input id="z3min" type="number" step="any" value="40"></td><td><input id="z3max" type="number" step="any" value="90"></td>
+        <td><input id="l3min" type="number" step="any" value="0"></td><td><input id="l3max" type="number" step="any" value="800"></td></tr>
+      <tr><td>Stub 2</td>
+        <td><input id="z4min" type="number" step="any" value="25"></td><td><input id="z4max" type="number" step="any" value="90"></td>
+        <td><input id="l4min" type="number" step="any" value="50"></td><td><input id="l4max" type="number" step="any" value="1200"></td></tr>
+      <tr><td>Feed line</td>
+        <td><input id="zfmin" type="number" step="any" value="50"></td><td><input id="zfmax" type="number" step="any" value="50"></td>
+        <td class="na" colspan="2">n/a (does not affect VSWR at junction 2)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <button id="rand" type="button">Randomize lines</button> 
+  <button id="worst" type="button">Find biggest VSWR</button>
+  <div class="worst" id="worstout"></div>
+  <p class="hint">Randomize picks a uniform random value inside each range and fills the inputs above. Find biggest VSWR searches all four ranges (random sampling, then local refinement) for the line values that give the largest VSWR at junction 2 across the three frequencies. Velocity factors and the frequency/load entries are left unchanged.</p>
+</fieldset>
+ 
+<div class="freqs">
+  <fieldset><legend>Frequency 1</legend>
+    <label>Frequency (MHz)<input id="f0" type="number" step="any" value="1000"></label>
+    <div class="row3"><label>R<sub>L</sub> (Ω)<input id="r0" type="number" step="any" value="100"></label><label>X<sub>L</sub> (Ω)<input id="x0" type="number" step="any" value="0"></label></div>
+  </fieldset>
+  <fieldset><legend>Frequency 2</legend>
+    <label>Frequency (MHz)<input id="f1" type="number" step="any" value="1001"></label>
+    <div class="row3"><label>R<sub>L</sub> (Ω)<input id="r1" type="number" step="any" value="100"></label><label>X<sub>L</sub> (Ω)<input id="x1" type="number" step="any" value="0"></label></div>
+  </fieldset>
+  <fieldset><legend>Frequency 3</legend>
+    <label>Frequency (MHz)<input id="f2" type="number" step="any" value="1002"></label>
+    <div class="row3"><label>R<sub>L</sub> (Ω)<input id="r2" type="number" step="any" value="100"></label><label>X<sub>L</sub> (Ω)<input id="x2" type="number" step="any" value="0"></label></div>
+  </fieldset>
+</div>
+ 
+<div style="margin:6px 0 14px"><button id="calc" type="button">Calculate</button></div>
+<div class="msg" id="msg"></div>
+<div class="tablewrap results">
+<table>
+  <thead><tr>
+    <th>#</th><th>f (MHz)</th><th>Line1 (λ)</th><th>Stub1 (λ)</th><th>Zin1 (Ω)</th>
+    <th>Line2 (λ)</th><th>Stub2 (λ)</th><th>Y at J2 (mS)</th><th>|Γ|</th><th>VSWR at junction 2</th>
+  </tr></thead>
+  <tbody id="out"></tbody>
+</table>
+</div>
+<p class="note">X<sub>L</sub> is positive for inductive and negative for capacitive loads. Zin1 is the impedance looking into junction 1 (load line 1 in parallel with stub 1); Line 2 transforms it up to junction 2, where it combines with stub 2.</p>
+</main>
+ 
+<script src="vswr_calculator1.js"></script>
+</body>
+</html>
+ 
